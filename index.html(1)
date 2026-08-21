@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>몬티 홀 딜레마 시각화 시뮬레이터</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
+        }
+
+        body {
+            background-color: #FFF9E6; /* 따뜻한 크림노랑 바탕 */
+            color: #4A3E3D;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: #FFFFFF;
+            width: 100%;
+            max-width: 680px;
+            border-radius: 24px;
+            padding: 30px 20px;
+            box-shadow: 0 10px 25px rgba(218, 165, 32, 0.2);
+            text-align: center;
+            border: 4px solid #FFE494;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #D97706;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.05rem;
+            color: #78350F;
+            margin-bottom: 25px;
+            word-break: keep-all;
+            line-height: 1.5;
+        }
+
+        /* 문 그리드 */
+        .doors-container {
+            display: flex;
+            justify-content: space-around;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .door-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .door-label {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #92400E;
+            margin-bottom: 8px;
+        }
+
+        .door {
+            width: 100%;
+            height: 160px;
+            background-color: #FBBF24;
+            border: 4px solid #D97706;
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 3rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            user-select: none;
+            box-shadow: 0 6px 0 #B45309;
+        }
+
+        .door:hover:not(.disabled) {
+            transform: translateY(-5px);
+            box-shadow: 0 11px 0 #B45309;
+            background-color: #FCD34D;
+        }
+
+        .door.selected {
+            border-color: #2563EB;
+            box-shadow: 0 6px 0 #1E40AF;
+            background-color: #BFDBFE;
+        }
+
+        .door.opened {
+            background-color: #FEF3C7;
+            border-color: #F59E0B;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+            cursor: default;
+        }
+
+        .door.revealed-car {
+            background-color: #DCFCE7;
+            border-color: #16A34A;
+            box-shadow: inset 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .door.disabled {
+            cursor: not-allowed;
+            opacity: 0.8;
+        }
+
+        .status-badge {
+            margin-top: 8px;
+            font-size: 0.85rem;
+            font-weight: bold;
+            padding: 4px 8px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .badge-selected {
+            background-color: #DBEAFE;
+            color: #1E40AF;
+            display: inline-block;
+        }
+
+        .badge-goat {
+            background-color: #FEE2E2;
+            color: #991B1B;
+            display: inline-block;
+        }
+
+        /* 안내 메시지 상자 */
+        .message-box {
+            background-color: #FFFBEB;
+            border: 2px solid #FCD34D;
+            padding: 18px;
+            border-radius: 16px;
+            font-size: 1.1rem;
+            color: #451A03;
+            margin-bottom: 25px;
+            min-height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.5;
+            word-break: keep-all;
+        }
+
+        /* 버튼 그룹 */
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background-color: #F59E0B;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background-color: #D97706;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: #6B7280;
+            box-shadow: 0 4px 10px rgba(107, 114, 128, 0.3);
+        }
+
+        .btn-secondary:hover {
+            background-color: #4B5563;
+        }
+
+        .btn:disabled {
+            background-color: #D1D5DB;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 통계 및 누적 시뮬레이션 섹션 */
+        .stats-section {
+            border-top: 2px dashed #FCD34D;
+            padding-top: 20px;
+            text-align: left;
+        }
+
+        .stats-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #78350F;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background-color: #FEF3C7;
+            padding: 15px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid #FCD34D;
+        }
+
+        .stat-card h3 {
+            font-size: 1rem;
+            color: #92400E;
+            margin-bottom: 8px;
+        }
+
+        .stat-rate {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #D97706;
+        }
+
+        .stat-detail {
+            font-size: 0.9rem;
+            color: #78350F;
+            margin-top: 4px;
+        }
+
+        /* 자동 시뮬레이션 제어 */
+        .auto-sim-box {
+            background-color: #FFFBEB;
+            padding: 15px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .auto-sim-title {
+            font-weight: bold;
+            color: #78350F;
+            font-size: 1rem;
+        }
+
+        .auto-btn-group {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.9rem;
+            border-radius: 20px;
+        }
+
+        /* 모바일 반응형 */
+        @media (max-width: 500px) {
+            .door {
+                height: 120px;
+                font-size: 2.2rem;
+            }
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .auto-sim-box {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .auto-btn-group {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>🚪 몬티 홀 딜레마 시각화</h1>
+        <p class="subtitle">
+            3개의 문 중 1개 뒤에는 <b>스포츠카🏎️</b>, 2개 뒤에는 <b>염소🐐</b>가 있습니다.<br>
+            선택을 바꾸는 것이 유리할까요? 직접 체험해 보세요!
+        </p>
+
+        <!-- 문 영역 -->
+        <div class="doors-container">
+            <div class="door-wrapper">
+                <div class="door-label">1번 문</div>
+                <div class="door" id="door-0" onclick="handleDoorClick(0)">🚪</div>
+                <div class="status-badge" id="badge-0"></div>
+            </div>
+            <div class="door-wrapper">
+                <div class="door-label">2번 문</div>
+                <div class="door" id="door-1" onclick="handleDoorClick(1)">🚪</div>
+                <div class="status-badge" id="badge-1"></div>
+            </div>
+            <div class="door-wrapper">
+                <div class="door-label">3번 문</div>
+                <div class="door" id="door-2" onclick="handleDoorClick(2)">🚪</div>
+                <div class="status-badge" id="badge-2"></div>
+            </div>
+        </div>
+
+        <!-- 메시지 안내 상자 -->
+        <div class="message-box" id="message-box">
+            마음에 드는 문 하나를 선택해 주세요!
+        </div>
+
+        <!-- 제어 버튼 -->
+        <div class="btn-group">
+            <button class="btn" id="btn-switch" onclick="makeFinalChoice(true)" disabled>다른 문으로 바꾸기</button>
+            <button class="btn btn-secondary" id="btn-keep" onclick="makeFinalChoice(false)" disabled>처음 선택 유지하기</button>
+            <button class="btn btn-secondary" id="btn-reset" onclick="initGame()">다시 하기</button>
+        </div>
+
+        <!-- 통계 및 누적 시뮬레이션 -->
+        <div class="stats-section">
+            <div class="stats-title">📊 누적 실험 통계</div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>🔄 선택을 바꾸었을 때</h3>
+                    <div class="stat-rate" id="switch-rate">0%</div>
+                    <div class="stat-detail" id="switch-detail">0승 / 0회 실행</div>
+                </div>
+                <div class="stat-card">
+                    <h3>🔒 선택을 유지했을 때</h3>
+                    <div class="stat-rate" id="keep-rate">0%</div>
+                    <div class="stat-detail" id="keep-detail">0승 / 0회 실행</div>
+                </div>
+            </div>
+
+            <!-- 자동 시뮬레이션 -->
+            <div class="auto-sim-box">
+                <div class="auto-sim-title">⚡ 빠른 자동 시뮬레이션</div>
+                <div class="auto-btn-group">
+                    <button class="btn btn-sm" onclick="runAutoSim(1)">+1회</button>
+                    <button class="btn btn-sm" onclick="runAutoSim(10)">+10회</button>
+                    <button class="btn btn-sm" onclick="runAutoSim(100)">+100회</button>
+                    <button class="btn btn-sm" onclick="runAutoSim(1000)">+1000회</button>
+                    <button class="btn btn-sm btn-secondary" onclick="resetStats()">리셋</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 게임 상태 변수
+        let carIndex = -1;
+        let initialChoice = -1;
+        let hostOpenedIndex = -1;
+        let gameState = 'INITIAL'; // INITIAL, HOST_OPENED, FINISHED
+
+        // 통계 변수
+        let stats = {
+            switchWins: 0,
+            switchTotal: 0,
+            keepWins: 0,
+            keepTotal: 0
+        };
+
+        // 초기화
+        function initGame() {
+            gameState = 'INITIAL';
+            carIndex = Math.floor(Math.random() * 3);
+            initialChoice = -1;
+            hostOpenedIndex = -1;
+
+            // UI 초기화
+            for (let i = 0; i < 3; i++) {
+                const door = document.getElementById(`door-${i}`);
+                door.innerText = '🚪';
+                door.className = 'door';
+                
+                const badge = document.getElementById(`badge-${i}`);
+                badge.className = 'status-badge';
+                badge.style.display = 'none';
+                badge.innerText = '';
+            }
+
+            document.getElementById('message-box').innerHTML = '마음에 드는 문 하나를 선택해 주세요!';
+            document.getElementById('btn-switch').disabled = true;
+            document.getElementById('btn-keep').disabled = true;
+        }
+
+        // 문 클릭 이벤트 핸들러
+        function handleDoorClick(index) {
+            if (gameState !== 'INITIAL') return;
+
+            initialChoice = index;
+            gameState = 'HOST_OPENED';
+
+            // 사회자(몬티)가 염소가 있는 문 하나를 염
+            let possibleHostDoors = [];
+            for (let i = 0; i < 3; i++) {
+                if (i !== initialChoice && i !== carIndex) {
+                    possibleHostDoors.push(i);
+                }
+            }
+            hostOpenedIndex = possibleHostDoors[Math.floor(Math.random() * possibleHostDoors.length)];
+
+            // UI 업데이트
+            // 1. 내 선택 표시
+            const playerDoor = document.getElementById(`door-${initialChoice}`);
+            playerDoor.classList.add('selected');
+            
+            const playerBadge = document.getElementById(`badge-${initialChoice}`);
+            playerBadge.innerText = '내 선택';
+            playerBadge.className = 'status-badge badge-selected';
+
+            // 2. 사회자가 문 열기
+            const hostDoor = document.getElementById(`door-${hostOpenedIndex}`);
+            hostDoor.innerText = '🐐';
+            hostDoor.classList.add('opened', 'disabled');
+
+            const hostBadge = document.getElementById(`badge-${hostOpenedIndex}`);
+            hostBadge.innerText = '염소 공개!';
+            hostBadge.className = 'status-badge badge-goat';
+
+            // 남은 문 찾기
+            const remainingDoor = [0, 1, 2].find(i => i !== initialChoice && i !== hostOpenedIndex);
+
+            // 메시지 및 버튼 업데이트
+            document.getElementById('message-box').innerHTML = 
+                `진행자가 <b>${hostOpenedIndex + 1}번 문</b>을 열어 <b>염소🐐</b>를 보여주었습니다!<br>` +
+                `선택을 <b>${remainingDoor + 1}번 문</b>으로 <b>바꾸시겠습니까?</b> 아니면 <b>유지하시겠습니까?</b>`;
+
+            document.getElementById('btn-switch').disabled = false;
+            document.getElementById('btn-keep').disabled = false;
+        }
+
+        // 최종 선택 (바꾸기 또는 유지)
+        function makeFinalChoice(isSwitch) {
+            if (gameState !== 'HOST_OPENED') return;
+
+            gameState = 'FINISHED';
+
+            let finalChoice = initialChoice;
+            if (isSwitch) {
+                finalChoice = [0, 1, 2].find(i => i !== initialChoice && i !== hostOpenedIndex);
+                stats.switchTotal++;
+            } else {
+                stats.keepTotal++;
+            }
+
+            const isWin = (finalChoice === carIndex);
+            if (isWin) {
+                if (isSwitch) stats.switchWins++;
+                else stats.keepWins++;
+            }
+
+            // 결과 공개 UI
+            for (let i = 0; i < 3; i++) {
+                const door = document.getElementById(`door-${i}`);
+                door.classList.add('disabled');
+                
+                if (i === carIndex) {
+                    door.innerText = '🏎️';
+                    door.classList.add('revealed-car');
+                } else if (i !== hostOpenedIndex) {
+                    door.innerText = '🐐';
+                    door.classList.add('opened');
+                }
+            }
+
+            // 결과 메시지
+            if (isWin) {
+                document.getElementById('message-box').innerHTML = 
+                    `🎉 <b>축하합니다! 스포츠카🏎️를 찾았습니다!</b><br>` +
+                    `(${isSwitch ? '선택을 바꾸어 승리하셨습니다!' : '처음 선택을 유지하여 승리하셨습니다!'})`;
+            } else {
+                document.getElementById('message-box').innerHTML = 
+                    `😭 <b>아쉽네요! 염소🐐가 나왔습니다.</b><br>` +
+                    `정답은 <b>${carIndex + 1}번 문</b>이었습니다. (${isSwitch ? '선택을 바꾸지 않았어야 합니다.' : '선택을 바꾸셨어야 합니다.'})`;
+            }
+
+            document.getElementById('btn-switch').disabled = true;
+            document.getElementById('btn-keep').disabled = true;
+
+            // 통계 업데이트
+            updateStatsUI();
+        }
+
+        // 통계 UI 업데이트
+        function updateStatsUI() {
+            const switchRate = stats.switchTotal > 0 ? ((stats.switchWins / stats.switchTotal) * 100).toFixed(1) : 0;
+            const keepRate = stats.keepTotal > 0 ? ((stats.keepWins / stats.keepTotal) * 100).toFixed(1) : 0;
+
+            document.getElementById('switch-rate').innerText = `${switchRate}%`;
+            document.getElementById('switch-detail').innerText = `${stats.switchWins}승 / ${stats.switchTotal}회 실행`;
+
+            document.getElementById('keep-rate').innerText = `${keepRate}%`;
+            document.getElementById('keep-detail').innerText = `${stats.keepWins}승 / ${stats.keepTotal}회 실행`;
+        }
+
+        // 대량 자동 시뮬레이션
+        function runAutoSim(count) {
+            for (let i = 0; i < count; i++) {
+                const car = Math.floor(Math.random() * 3);
+                const firstChoice = Math.floor(Math.random() * 3);
+
+                // 사회자가 염소 문 오픈
+                let hostPossible = [];
+                for (let d = 0; d < 3; d++) {
+                    if (d !== firstChoice && d !== car) {
+                        hostPossible.push(d);
+                    }
+                }
+                const hostOpen = hostPossible[Math.floor(Math.random() * hostPossible.length)];
+
+                // 바꾸기 전략 테스트
+                const switchChoice = [0, 1, 2].find(d => d !== firstChoice && d !== hostOpen);
+                stats.switchTotal++;
+                if (switchChoice === car) stats.switchWins++;
+
+                // 유지하기 전략 테스트
+                stats.keepTotal++;
+                if (firstChoice === car) stats.keepWins++;
+            }
+
+            updateStatsUI();
+            
+            // 시뮬레이션 실행 후 메시지 갱신
+            document.getElementById('message-box').innerHTML = 
+                `⚡ <b>${count}회 자동 시뮬레이션 완료!</b><br>` +
+                `실행 회수가 누적될수록 바꾸기 승률은 약 <b>66.7%</b>, 유지 승률은 약 <b>33.3%</b>에 가깝게 맞춰집니다.`;
+        }
+
+        // 통계 리셋
+        function resetStats() {
+            stats = { switchWins: 0, switchTotal: 0, keepWins: 0, keepTotal: 0 };
+            updateStatsUI();
+            initGame();
+        }
+
+        // 최초 게임 생성
+        initGame();
+    </script>
+</body>
+</html>
